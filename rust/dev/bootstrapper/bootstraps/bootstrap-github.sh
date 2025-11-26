@@ -427,10 +427,8 @@ create_repo_with_gh() {
         return 1
     fi
     
-    # Check if gh is authenticated
+    # Check if gh is authenticated (should already be done in setup_remote, but double-check)
     if ! gh auth status &>/dev/null; then
-        echo "  ⚠️  GitHub CLI not authenticated"
-        echo "     Run: gh auth login"
         return 1
     fi
     
@@ -545,6 +543,24 @@ setup_remote() {
             IS_PRIVATE="false"
             if [[ $REPLY =~ ^[Yy]$ ]]; then
                 IS_PRIVATE="true"
+            fi
+            
+            # Check if GitHub CLI is available and authenticated
+            if command -v gh &> /dev/null; then
+                # Check if gh is authenticated
+                if ! gh auth status &>/dev/null; then
+                    echo ""
+                    echo "🔐 GitHub CLI not authenticated"
+                    echo "   Running: gh auth login"
+                    echo ""
+                    if gh auth login; then
+                        echo "✅ GitHub CLI authenticated"
+                    else
+                        echo "⚠️  GitHub CLI authentication failed or cancelled"
+                        echo "   Will try alternative methods..."
+                    fi
+                    echo ""
+                fi
             fi
             
             # Try to create using GitHub CLI
