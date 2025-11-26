@@ -137,8 +137,11 @@ show_status() {
     # GitHub SSH Connection Test
     echo "🔌 GitHub SSH Connection:"
     if [ -f "$SSH_KEY_PATH" ]; then
+        # Capture output and exit code without triggering set -e
+        set +e
         TEST_OUTPUT=$(timeout 5 ssh -o ConnectTimeout=5 -o BatchMode=yes -T git@github.com 2>&1)
         EXIT_CODE=$?
+        set -e
         
         if echo "$TEST_OUTPUT" | grep -qi "successfully authenticated"; then
             echo "  ✅ SSH connection successful"
@@ -147,6 +150,9 @@ show_status() {
         elif echo "$TEST_OUTPUT" | grep -qi "permission denied"; then
             echo "  ⚠️  Permission denied (key may not be added to GitHub)"
             echo "     Add key at: https://github.com/settings/keys"
+            echo ""
+            echo "  📋 Your public key (copy and add to GitHub):"
+            cat "$SSH_KEY_PATH.pub" | sed 's/^/     /'
         elif echo "$TEST_OUTPUT" | grep -qi "host key verification failed"; then
             echo "  ⚠️  Host key verification failed"
             echo "     Run: ssh-keyscan github.com >> ~/.ssh/known_hosts"
