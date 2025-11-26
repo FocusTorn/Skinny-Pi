@@ -217,6 +217,90 @@ setup_local_repo() {
     echo "✅ Local git repository configured"
 }
 
+# Check if repository exists on GitHub
+check_repo_exists() {
+    local GITHUB_USER=$1
+    local REPO_NAME=$2
+    
+    # Try to check via git ls-remote (works if repo exists and is accessible)
+    set +e
+    git ls-remote "git@github.com:$GITHUB_USER/$REPO_NAME.git" &>/dev/null
+    local EXISTS=$?
+    set -e
+    
+    if [ $EXISTS -eq 0 ]; then
+        return 0  # Repository exists
+    else
+        return 1  # Repository doesn't exist or not accessible
+    fi
+}
+
+# Create repository on GitHub using GitHub CLI
+create_repo_with_gh() {
+    local GITHUB_USER=$1
+    local REPO_NAME=$2
+    local IS_PRIVATE=$3
+    
+    if ! command -v gh &> /dev/null; then
+        return 1
+    fi
+    
+    # Check if gh is authenticated
+    if ! gh auth status &>/dev/null; then
+        echo "  ⚠️  GitHub CLI not authenticated"
+        echo "     Run: gh auth login"
+        return 1
+    fi
+    
+    # Create repository
+    set +e
+    if [ "$IS_PRIVATE" = "true" ]; then
+        gh repo create "$REPO_NAME" --private --source=. --remote=origin --push &>/dev/null
+    else
+        gh repo create "$REPO_NAME" --public --source=. --remote=origin --push &>/dev/null
+    fi
+    local RESULT=$?
+    set -e
+    
+    if [ $RESULT -eq 0 ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# Create repository on GitHub using API
+create_repo_with_api() {
+    local GITHUB_USER=$1
+    local REPO_NAME=$2
+    local IS_PRIVATE=$3
+    local GITHUB_TOKEN=$4
+    
+    if [ -z "$GITHUB_TOKEN" ]; then
+        return 1
+    fi
+    
+    local VISIBILITY="public"
+    if [ "$IS_PRIVATE" = "true" ]; then
+        VISIBILITY="private"
+    fi
+    
+    set +e
+    RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+        -H "Accept: application/vnd.github.v3+json" \
+        -H "Authorization: token $GITHUB_TOKEN" \
+        https://api.github.com/user/repos \
+        -d "{\"name\":\"$REPO_NAME\",\"private\":$IS_PRIVATE,\"auto_init\":false}" 2>&1)
+    HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+    set -e
+    
+    if [ "$HTTP_CODE" = "201" ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 # Setup git remote
 setup_remote() {
     cd "$GIT_REPO_DIR"
@@ -262,10 +346,79 @@ setup_remote() {
     read -p "Enter repository name [$DEFAULT_REPO]: " REPO_NAME
     REPO_NAME="${REPO_NAME:-$DEFAULT_REPO}"
     
-    # Add remote
-    REMOTE_URL="git@github.com:$GITHUB_USER/$REPO_NAME.git"
-    git remote add origin "$REMOTE_URL"
-    echo "✅ Added remote 'origin': $REMOTE_URL"
+    # Check if repository already exists
+    echo ""
+    echo "🔍 Checking if repository exists on GitHub..."
+    if check_repo_exists "$GITHUB_USER" "$REPO_NAME"; then
+        echo "✅ Repository already exists: $GITHUB_USER/$REPO_NAME"
+    else
+        echo "ℹ️  Repository doesn't exist yet: $GITHUB_USER/$REPO_NAME"
+        echo ""
+        read -p "Create repository on GitHub? (Y/n): " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            # Ask for visibility
+            read -p "Make repository private? (y/N): " -n 1 -r
+            echo
+            IS_PRIVATE="false"
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                IS_PRIVATE="true"
+            fi
+            
+            # Try to create using GitHub CLI
+            echo ""
+            echo "🔨 Creating repository on GitHub..."
+            if create_repo_with_gh "$GITHUB_USER" "$REPO_NAME" "$IS_PRIVATE"; then
+                echo "✅ Repository created using GitHub CLI"
+                # gh repo create already sets up the remote and pushes
+                CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "main")
+                git branch --set-upstream-to=origin/$CURRENT_BRANCH 2>/dev/null || true
+                echo ""
+                echo "📋 Current remotes:"
+                git remote -v
+                return 0
+            else
+                # Try using API with token from environment or secrets
+                GITHUB_TOKEN="${GITHUB_TOKEN:-}"
+                if [ -f "$HOME/.secrets" ]; then
+                    # Try to get token from secrets file
+                    GITHUB_TOKEN=$(grep "^GITHUB_TOKEN=" "$HOME/.secrets" 2>/dev/null | cut -d'=' -f2- | tr -d '"' | tr -d "'" || echo "")
+                fi
+                
+                if [ -n "$GITHUB_TOKEN" ]; then
+                    echo "  🔑 Using GitHub token from environment/secrets..."
+                    if create_repo_with_api "$GITHUB_USER" "$REPO_NAME" "$IS_PRIVATE" "$GITHUB_TOKEN"; then
+                        echo "✅ Repository created using GitHub API"
+                    else
+                        echo "⚠️  Failed to create repository via API"
+                        echo "   You'll need to create it manually"
+                    fi
+                else
+                    echo "⚠️  Cannot create repository automatically"
+                    echo "   Options:"
+                    echo "   1. Install GitHub CLI: apt install gh && gh auth login"
+                    echo "   2. Set GITHUB_TOKEN environment variable"
+                    echo "   3. Add GITHUB_TOKEN to ~/.secrets file"
+                    echo "   4. Create manually at: https://github.com/new"
+                fi
+            fi
+        fi
+    fi
+    
+    # Add remote if it doesn't exist
+    if ! git remote | grep -q "^origin$"; then
+        REMOTE_URL="git@github.com:$GITHUB_USER/$REPO_NAME.git"
+        git remote add origin "$REMOTE_URL"
+        echo "✅ Added remote 'origin': $REMOTE_URL"
+    else
+        # Update remote URL if it's different
+        CURRENT_URL=$(git remote get-url origin 2>/dev/null || echo "")
+        NEW_URL="git@github.com:$GITHUB_USER/$REPO_NAME.git"
+        if [ "$CURRENT_URL" != "$NEW_URL" ]; then
+            git remote set-url origin "$NEW_URL"
+            echo "✅ Updated remote 'origin': $NEW_URL"
+        fi
+    fi
     
     # Set upstream branch
     CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "main")
@@ -276,15 +429,22 @@ setup_remote() {
     echo "📋 Current remotes:"
     git remote -v
     echo ""
-    echo "📝 Next steps:"
-    echo "   1. Create the repository on GitHub: https://github.com/new"
-    echo "      Name: $REPO_NAME"
-    echo "      Don't initialize with README (we already have one)"
-    echo ""
-    echo "   2. Push to GitHub:"
-    echo "      git add ."
-    echo "      git commit -m 'Initial $REPO_NAME repository setup'"
-    echo "      git push -u origin $CURRENT_BRANCH"
+    
+    # Check if repository exists before showing next steps
+    if ! check_repo_exists "$GITHUB_USER" "$REPO_NAME"; then
+        echo "📝 Next steps:"
+        echo "   1. Create the repository on GitHub: https://github.com/new"
+        echo "      Name: $REPO_NAME"
+        echo "      Don't initialize with README (we already have one)"
+        echo ""
+        echo "   2. Push to GitHub:"
+        echo "      git add ."
+        echo "      git commit -m 'Initial $REPO_NAME repository setup'"
+        echo "      git push -u origin $CURRENT_BRANCH"
+    else
+        echo "✅ Repository is ready! Push your code:"
+        echo "   git push -u origin $CURRENT_BRANCH"
+    fi
 }
 
 # Handle subcommands
