@@ -1,0 +1,63 @@
+# Secrets and sensitive files
+.secrets
+*.key
+*.pem
+*.p12
+.env
+.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+*.egg-info/
+dist/
+build/
+
+# Rust
+target/
+**/*.rs.bk
+Cargo.lock
+
+# ESP32 / PlatformIO
+.pio/
+.vscode/
+
+# HomeAssistant runtime data
+homeassistant/.storage/
+homeassistant/.cloud/
+
+# System
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# User-specific secrets (home directory)
+~/.secrets
+~/.mqtt_secrets
+
+
+

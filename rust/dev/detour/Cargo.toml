@@ -1,0 +1,29 @@
+[package]
+name = "detour"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "File overlay/detour management system with TUI"
+
+[lib]
+name = "detour"
+path = "src/lib.rs"
+
+[[bin]]
+name = "detour"
+path = "src/main.rs"
+
+[dependencies]
+# Shared components
+tui-components = { path = "../../resources/components" }
+
+# TUI dependencies
+ratatui.workspace = true
+crossterm.workspace = true
+serde.workspace = true
+serde_yaml.workspace = true
+chrono.workspace = true
+clap.workspace = true
+arboard.workspace = true
+

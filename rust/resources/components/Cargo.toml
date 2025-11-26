@@ -1,0 +1,16 @@
+[package]
+name = "tui-components"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Shared TUI components for Rust terminal user interfaces"
+
+[lib]
+name = "tui_components"
+path = "src/lib.rs"
+
+[dependencies]
+ratatui.workspace = true
+crossterm.workspace = true
+

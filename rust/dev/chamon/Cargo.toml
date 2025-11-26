@@ -1,0 +1,38 @@
+[package]
+name = "chamon-tui"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Chamon TUI application"
+
+[lib]
+name = "chamon_tui"
+path = "src/lib.rs"
+
+[[bin]]
+name = "chamon"
+path = "src/main.rs"
+
+[dependencies]
+# Shared components
+tui-components = { path = "../../resources/components" }
+
+# TUI dependencies
+ratatui.workspace = true
+crossterm.workspace = true
+serde.workspace = true
+serde_yaml.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+dashmap.workspace = true
+md5.workspace = true
+sha2.workspace = true
+notify.workspace = true
+num_cpus.workspace = true
+rayon.workspace = true
+tachyonfx.workspace = true
+threadpool.workspace = true
+tokio.workspace = true
+ratatui-widgets.workspace = true
+

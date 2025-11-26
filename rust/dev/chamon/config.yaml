@@ -1,0 +1,72 @@
+title: "CHAMON - File change Monitor"
+
+baseline:
+    exclude_directories:
+        # Virtual filesystems (kernel interfaces)
+        - "/dev"
+        - "/proc"
+        - "/sys"
+        # Temporary/runtime data (cleared on reboot)
+        - "/run"
+        - "/tmp"
+        - "/srv"
+        # Mount points (external drives)
+        - "/media"
+        - "/mnt"
+        # Constantly changing during operation
+        - "/var"
+        # Package management directories (100% safe)
+        # - "/var/lib/dpkg"
+        # - "/var/lib/apt"
+        # - "/var/cache/apt"
+        # - "/var/log/apt"
+
+        # 100% package-managed directories (never manually modified)
+        - "/usr/lib"
+        - "/usr/include"
+        - "/usr/src"
+        - "/usr/share"
+        - "/usr/libexec"
+        - "/usr/bin"
+        - "/usr/sbin"
+        - "/usr/games"
+
+        # Symlinks
+        - "/.cursor-server"
+        - "/bin"
+        - "/lib"
+        - "/sbin"
+        - "/.local"
+        # Root user home directory - exclude user-specific subdirectories
+        # (project files in /root/_playground are tracked separately)
+        - "/root/.cache"
+        - "/root/.cargo"
+        - "/root/.cursor"
+        - "/root/.cursor-server"
+        - "/root/.oh-my-zsh"
+        - "/root/.rustup"
+        - "/root/.ssh"
+        - "/root/.local"
+        # If you want to exclude /root entirely (including _playground), uncomment:
+        # - "/root"
+
+    existence_only_directories:
+        - "/opt"
+        - "/usr/local/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/lib"
+
+    existence_only_extensions:
+        - ".so"
+        - ".a"
+        - ".bin"
+        - ".pyc"
+        - ".o"
+        - ".exe"
+        - ".dll"
+        - ".dylib"
+        - ".so.*"
+
+    content_size_limit: 102400 # 100KB
+
+    exclusion_log: "data/baselines/size-exclusions.log"
