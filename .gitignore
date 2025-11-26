@@ -1,5 +1,4 @@
 # Secrets and sensitive files
-.secrets
 *.key
 *.pem
 *.p12
@@ -61,3 +60,6 @@ Thumbs.db
 
 
 
+
+# Note: .secrets is encrypted with git-crypt and IS tracked in git
+# The encrypted version is safe to commit
