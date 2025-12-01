@@ -389,6 +389,8 @@ function showIntensityVariations(colorCode, isBackground, foregroundColorCode = 
         const { percent, rgb } = variation
         const percentLabel = percent === 0 ? '  0' : percent > 0 ? `+${percent}` : `${percent}`
         const percentPadding = percent === 0 ? '  ' : percent > 0 ? '' : ''
+        const rgbString = `RGB(${rgb.r}, ${rgb.g}, ${rgb.b})`
+        const hexString = rgbToHex(rgb)
         
         if (isBackground) {
             const bgCode = `\u001B[48;2;${rgb.r};${rgb.g};${rgb.b}m`
@@ -397,18 +399,18 @@ function showIntensityVariations(colorCode, isBackground, foregroundColorCode = 
                 // Use provided foreground color and display custom text (wrapped in spaces)
                 const fgCode = `\u001B[38;2;${fgRgb.r};${fgRgb.g};${fgRgb.b}m`
                 const displayText = ` ${customText} ` // Wrap text in spaces
-                console.log(` ${bgCode}${fgCode}${displayText}${reset} ${percentPadding}${percentLabel}%`)
+                console.log(` ${bgCode}${fgCode}${displayText}${reset} ${percentPadding}${percentLabel}%  ${rgbString}  ${hexString}`)
             }
             else {
                 // Background color with matching text color
                 const fgCode = `\u001B[38;2;${rgb.r};${rgb.g};${rgb.b}m`
-                console.log(` ${bgCode}${fgCode}[|||]${reset} ${percentPadding}${percentLabel}%`)
+                console.log(` ${bgCode}${fgCode}[|||]${reset} ${percentPadding}${percentLabel}%  ${rgbString}  ${hexString}`)
             }
         }
         else {
             // Foreground color
             const fgCode = `\u001B[38;2;${rgb.r};${rgb.g};${rgb.b}m`
-            console.log(` ${fgCode}[|||]${reset} ${percentPadding}${percentLabel}%`)
+            console.log(` ${fgCode}[|||]${reset} ${percentPadding}${percentLabel}%  ${rgbString}  ${hexString}`)
         }
     }
     

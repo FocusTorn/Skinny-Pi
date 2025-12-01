@@ -1,6 +1,7 @@
 // Shared TUI components library
 // Reusable components for all TUI applications
 
+pub mod base_layout;
 pub mod file_browser;
 pub mod form_panel;
 pub mod helpers;
@@ -9,6 +10,7 @@ pub mod popup;
 pub mod tab_bar;
 pub mod toast;
 
+pub use base_layout::*;
 pub use file_browser::*;
 pub use form_panel::*;
 pub use helpers::*;

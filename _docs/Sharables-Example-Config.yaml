@@ -1,0 +1,32 @@
+# Example Sharables Deployment Configuration
+# Copy this to .sharables/.sharables-deploy.yaml and customize
+
+deployments:
+  # Deploy cursor-rules to .cursor/rules (relative to project root)
+  - section: cursor-rules
+    target: .cursor/rules
+    method: symlink  # symlink, copy, or git-worktree
+    
+  # Deploy global-utilities to home directory
+  - section: global-utilities
+    target: ~/.local/share/sharables
+    method: symlink
+    
+  # Example: Deploy shared-configs to project config
+  # - section: shared-configs
+  #   target: .config/sharables
+  #   method: symlink
+    
+  # Example: Deploy docs as read-only copy
+  # - section: docs
+  #   target: .sharables-docs
+  #   method: copy
+
+# Notes:
+# - target paths can be relative (to project root) or absolute
+# - ~ is expanded to $HOME
+# - method: symlink (recommended) maintains git connection
+# - method: copy creates independent copies (no git tracking)
+# - symlink method: changes at target are tracked in sharables repo
+# - symlink method: commit/push from .sharables directory
+
