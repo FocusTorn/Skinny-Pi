@@ -1,0 +1,20 @@
+[package]
+name = "component-examples"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Standalone examples for TUI components"
+
+[[bin]]
+name = "tab-bar-example"
+path = "src/tab_bar_example.rs"
+
+[dependencies]
+# Shared components
+tui-components = { path = "../components" }
+
+# TUI dependencies
+ratatui.workspace = true
+crossterm.workspace = true
+

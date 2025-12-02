@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "resources/components",
+    "resources/examples",
     "dev/bootstrapper",
     "dev/chamon",
     "dev/detour",
