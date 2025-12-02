@@ -100,22 +100,31 @@ impl TabBar {
         
         // Find the position of the active tab within the tab bar
         let mut current_x = 0;
-        let leading_sep = "── ";
+        let first_is_active = self.items.first().map(|item| item.active && self.style == TabBarStyle::Tab).unwrap_or(false);
+        let leading_sep = if first_is_active {
+            "──" // No space, connects directly to ╯
+        } else {
+            "── " // Space after for inactive tabs
+        };
         current_x += leading_sep.chars().count() as u16;
         
         let mut active_tab_start = 0;
         let mut active_tab_width = 0;
         
         // Calculate where the active tab starts (relative to tab bar start)
+        let mut prev_was_active = false;
         for (idx, item) in self.items.iter().enumerate() {
             if idx > 0 {
-                let is_before_active = item.active && self.style == TabBarStyle::Tab;
-                let separator = if is_before_active {
-                    " ─"
-                } else {
-                    " ─ "
-                };
-                current_x += separator.chars().count() as u16;
+                // Skip separator if previous tab was active (we already added separator after it)
+                if !prev_was_active {
+                    let is_before_active = item.active && self.style == TabBarStyle::Tab;
+                    let separator = if is_before_active {
+                        " ─" // Space-dash, creates gap before ╯
+                    } else {
+                        " ─ " // Space before and after for inactive tabs
+                    };
+                    current_x += separator.chars().count() as u16;
+                }
             }
             
             if item.active {
@@ -124,7 +133,17 @@ impl TabBar {
                 active_tab_width = text.chars().count() as u16;
                 break;
             } else {
+                // Inactive tab: add its width
                 current_x += item.name.chars().count() as u16;
+                // Check if previous tab (at idx-1) was active
+                if idx > 0 {
+                    prev_was_active = self.items[idx - 1].active && self.style == TabBarStyle::Tab;
+                    if prev_was_active {
+                        // Previous tab was active, so we already added separator after it
+                        // Reset for next iteration
+                        prev_was_active = false;
+                    }
+                }
             }
         }
         
@@ -245,25 +264,34 @@ impl TabBar {
 
     pub fn estimate_width(&self) -> u16 {
         // Calculate based on actual tab text and dividers (using character count)
-        // Leading "── " = 3 chars
-        let leading = "── ";
+        // Leading separator depends on if first tab is active
+        let first_is_active = self.items.first().map(|item| item.active && self.style == TabBarStyle::Tab).unwrap_or(false);
+        let leading = if first_is_active {
+            "──" // No space, connects directly to ╯
+        } else {
+            "── " // Space after for inactive tabs
+        };
         let mut width = leading.chars().count() as u16;
         
-        // Trailing "──" = 2 chars
+        // Trailing "──" = 2 chars (always added)
         let trailing = "──";
         width += trailing.chars().count() as u16;
         
+        let mut prev_was_active = false;
         for (idx, item) in self.items.iter().enumerate() {
             if idx > 0 {
                 // Separator before each tab (except first)
-                // Check if separator is before active tab (for Tab style)
-                let is_before_active = item.active && self.style == TabBarStyle::Tab;
-                let separator = if is_before_active {
-                    " ─" // No space after, connects to ╯
-                } else {
-                    " ─ " // Space before and after
-                };
-                width += separator.chars().count() as u16;
+                // Skip if previous tab was active (we already added separator after it)
+                if !prev_was_active {
+                    // Check if separator is before active tab (for Tab style)
+                    let is_before_active = item.active && self.style == TabBarStyle::Tab;
+                    let separator = if is_before_active {
+                        " ─" // Space-dash, creates gap before ╯
+                    } else {
+                        " ─ " // Space before and after for inactive tabs
+                    };
+                    width += separator.chars().count() as u16;
+                }
             }
             
             // Tab text width (using character count)
@@ -283,6 +311,14 @@ impl TabBar {
                     width += item.name.chars().count() as u16;
                 }
             }
+            
+            // Separator after active tab if there's a next tab
+            if item.active && self.style == TabBarStyle::Tab && idx < self.items.len() - 1 {
+                width += "─ ".chars().count() as u16; // Dash-space, connects to ╰ then space before next tab
+                prev_was_active = true;
+            } else {
+                prev_was_active = false;
+            }
         }
         width
     }
@@ -291,30 +327,43 @@ impl TabBar {
         let mut spans = Vec::new();
         let mut current_width = 0;
 
-        // Start with leading separator (with space after)
-        let leading_sep = "── ";
+        // Check if first tab is active to determine leading separator
+        let first_is_active = self.items.first().map(|item| item.active && self.style == TabBarStyle::Tab).unwrap_or(false);
+        
+        // Start with leading separator
+        let leading_sep = if first_is_active {
+            "──" // No space, connects directly to ╯
+        } else {
+            "── " // Space after for inactive tabs
+        };
         spans.push(Span::styled(leading_sep, Style::default().fg(Color::White)));
         current_width += leading_sep.chars().count() as u16;
 
+        // Track if previous tab was active to skip separator before next tab
+        let mut prev_was_active = false;
+        
         // Add tabs with separators - ensure we show all tabs
         for (idx, item) in self.items.iter().enumerate() {
             if idx > 0 {
                 // Add separator before each tab (except first)
-                // Check if this is the separator before the active tab
-                let is_before_active = item.active;
-                let separator = if is_before_active && self.style == TabBarStyle::Tab {
-                    " ─" // No space after, will connect to ╯
-                } else {
-                    " ─ " // Space before and after
-                };
-                let sep_width = separator.chars().count() as u16; // Use char count, not byte length
-                
-                if current_width + sep_width <= max_width {
-                    spans.push(Span::styled(separator, Style::default().fg(Color::White)));
-                    current_width += sep_width;
-                } else {
-                    // If we can't fit the separator, we can't fit the tab either
-                    break;
+                // Skip if previous tab was active (we already added separator after it)
+                if !prev_was_active {
+                    // Check if this is the separator before the active tab
+                    let is_before_active = item.active && self.style == TabBarStyle::Tab;
+                    let separator = if is_before_active {
+                        " ─" // Space-dash, creates gap before ╯
+                    } else {
+                        " ─ " // Space before and after for inactive tabs
+                    };
+                    let sep_width = separator.chars().count() as u16; // Use char count, not byte length
+                    
+                    if current_width + sep_width <= max_width {
+                        spans.push(Span::styled(separator, Style::default().fg(Color::White)));
+                        current_width += sep_width;
+                    } else {
+                        // If we can't fit the separator, we can't fit the tab either
+                        break;
+                    }
                 }
             }
 
@@ -354,10 +403,26 @@ impl TabBar {
 
             spans.push(Span::styled(tab_text, style));
             current_width += tab_width;
+            
+            // Add separator after active tab if there's a next tab
+            if item.active && self.style == TabBarStyle::Tab && idx < self.items.len() - 1 {
+                // Check if next tab exists and we have space
+                let next_sep = "─ "; // Dash-space, connects to ╰ then space before next tab
+                let next_sep_width = next_sep.chars().count() as u16;
+                if current_width + next_sep_width <= max_width {
+                    spans.push(Span::styled(next_sep, Style::default().fg(Color::White)));
+                    current_width += next_sep_width;
+                    prev_was_active = true; // Mark that we added separator after active tab
+                } else {
+                    prev_was_active = false;
+                }
+            } else {
+                prev_was_active = false;
+            }
         }
 
         // Add trailing separator if there's space (at least 2 chars needed)
-        // Only add if we have at least 2 characters of space remaining
+        // Always add trailing `──` if there's space, regardless of active state
         if max_width >= current_width + 2 {
             spans.push(Span::styled("──", Style::default().fg(Color::White)));
         }
